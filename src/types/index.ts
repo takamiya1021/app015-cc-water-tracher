@@ -8,7 +8,25 @@ export interface WaterIntake {
 }
 
 // 飲み物の種類
-export type DrinkType = 'water' | 'other';
+export type DrinkType = 'water' | 'tea' | 'coffee' | 'juice' | 'sports' | 'other';
+
+// 飲み物種類の詳細情報
+export interface DrinkTypeInfo {
+  id: DrinkType;
+  name: string;
+  icon: string;
+  category: 'hydrating' | 'caffeinated' | 'sugary' | 'other';
+}
+
+// 飲み物種類一覧
+export const DRINK_TYPES: DrinkTypeInfo[] = [
+  { id: 'water', name: '水', icon: '💧', category: 'hydrating' },
+  { id: 'tea', name: 'お茶', icon: '🍵', category: 'hydrating' },
+  { id: 'coffee', name: 'コーヒー', icon: '☕', category: 'caffeinated' },
+  { id: 'juice', name: 'ジュース', icon: '🧃', category: 'sugary' },
+  { id: 'sports', name: 'スポーツドリンク', icon: '🥤', category: 'hydrating' },
+  { id: 'other', name: 'その他', icon: '🥛', category: 'other' }
+];
 
 // 活動量レベル
 export type ActivityLevel = 'light' | 'moderate' | 'intense';

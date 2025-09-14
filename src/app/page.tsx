@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { WaterIntake, DrinkType, PRESET_AMOUNTS } from '@/types';
+import { WaterIntake, DrinkType, PRESET_AMOUNTS, DRINK_TYPES } from '@/types';
 import { WaterTrackerStorage } from '@/lib/storage';
 import { DataAggregator, ProgressHelper } from '@/lib/calculations';
 
@@ -14,6 +14,10 @@ export default function HomePage() {
   const [customAmount, setCustomAmount] = useState('');
   const [selectedDrinkType, setSelectedDrinkType] = useState<DrinkType>('water');
   const [isLoading, setIsLoading] = useState(true);
+  const [deleteConfirm, setDeleteConfirm] = useState<{show: boolean, intakeId: string | null}>({
+    show: false,
+    intakeId: null
+  });
 
   // 今日の日付文字列を取得
   const today = WaterTrackerStorage.getTodayString();
@@ -45,6 +49,22 @@ export default function HomePage() {
     };
 
     loadData();
+
+    // 設定画面から戻ってきた時の再読み込み
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        const settings = WaterTrackerStorage.getSettings();
+        setGoalAmount(settings.dailyGoal.goalAmount);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleVisibilityChange);
+    };
   }, [today]);
 
   // 摂取記録を追加
@@ -87,6 +107,37 @@ export default function HomePage() {
     }
   };
 
+  // 削除確認を表示
+  const showDeleteConfirm = (intakeId: string) => {
+    setDeleteConfirm({ show: true, intakeId });
+  };
+
+  // 削除をキャンセル
+  const cancelDelete = () => {
+    setDeleteConfirm({ show: false, intakeId: null });
+  };
+
+  // 摂取記録を削除
+  const deleteIntake = () => {
+    if (!deleteConfirm.intakeId) return;
+
+    try {
+      WaterTrackerStorage.deleteIntake(deleteConfirm.intakeId);
+
+      // 状態を更新
+      const updatedIntakes = todayIntakes.filter(intake => intake.id !== deleteConfirm.intakeId);
+      setTodayIntakes(updatedIntakes);
+
+      const newTotal = DataAggregator.getDailyTotal(updatedIntakes);
+      setCurrentAmount(newTotal);
+
+      // 削除確認を閉じる
+      setDeleteConfirm({ show: false, intakeId: null });
+    } catch (error) {
+      console.error('Error deleting intake:', error);
+    }
+  };
+
   // 進捗率を計算
   const achievementRate = ProgressHelper.getProgressWidth(currentAmount, goalAmount);
   const progressColor = ProgressHelper.getProgressColor(achievementRate);
@@ -105,15 +156,23 @@ export default function HomePage() {
       {/* ヘッダー */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-md mx-auto px-4 py-4 flex items-center justify-between">
-          <h1 className="text-xl font-bold text-gray-900">
+          <h1 className="text-lg font-bold text-gray-900">
             💧 水分摂取トラッカー
           </h1>
-          <Link
-            href="/history"
-            className="text-primary-500 hover:text-primary-600 font-medium"
-          >
-            📊 履歴
-          </Link>
+          <div className="flex gap-4">
+            <Link
+              href="/history"
+              className="text-primary-500 hover:text-primary-600 font-medium"
+            >
+              📊 履歴
+            </Link>
+            <Link
+              href="/settings"
+              className="text-primary-500 hover:text-primary-600 font-medium"
+            >
+              ⚙️ 設定
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -172,28 +231,46 @@ export default function HomePage() {
 
         {/* 飲み物種類選択 */}
         <div className="bg-white rounded-xl p-6 shadow-sm">
-          <h3 className="font-semibold text-gray-800 mb-3">飲み物の種類</h3>
-          <div className="grid grid-cols-2 gap-3">
+          <h3 className="font-semibold text-gray-800 mb-4">飲み物の種類</h3>
+
+          {/* 水（メイン） */}
+          <div className="mb-4">
             <button
               onClick={() => setSelectedDrinkType('water')}
-              className={`p-3 rounded-lg font-medium transition-colors ${
+              className={`w-full p-4 rounded-xl font-semibold transition-colors text-base ${
                 selectedDrinkType === 'water'
-                  ? 'bg-primary-500 text-white'
+                  ? 'bg-primary-500 text-white shadow-lg'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              💧 水
+              <div className="flex flex-col items-center gap-2">
+                <span className="text-3xl">💧</span>
+                <span className="text-lg">水</span>
+              </div>
             </button>
-            <button
-              onClick={() => setSelectedDrinkType('other')}
-              className={`p-3 rounded-lg font-medium transition-colors ${
-                selectedDrinkType === 'other'
-                  ? 'bg-primary-500 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              🥤 その他
-            </button>
+          </div>
+
+          {/* その他の飲み物（サブ） */}
+          <div className="border-t pt-4">
+            <p className="text-xs text-gray-500 mb-3">その他の飲み物</p>
+            <div className="grid grid-cols-2 gap-2">
+              {DRINK_TYPES.filter(drink => drink.id !== 'water').map((drink) => (
+                <button
+                  key={drink.id}
+                  onClick={() => setSelectedDrinkType(drink.id)}
+                  className={`p-2 rounded-lg font-medium transition-colors text-xs ${
+                    selectedDrinkType === drink.id
+                      ? 'bg-primary-500 text-white'
+                      : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-sm">{drink.icon}</span>
+                    <span>{drink.name}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -249,20 +326,61 @@ export default function HomePage() {
                 .map((intake) => (
                   <div
                     key={intake.id}
-                    className="flex justify-between items-center py-2 px-3 bg-gray-50 rounded-lg"
+                    className="flex justify-between items-center py-2 px-3 bg-gray-50 rounded-lg group hover:bg-gray-100 transition-colors"
                   >
                     <div className="flex items-center gap-2">
-                      <span>{intake.drinkType === 'water' ? '💧' : '🥤'}</span>
+                      <span>
+                        {DRINK_TYPES.find(drink => drink.id === intake.drinkType)?.icon || '🥛'}
+                      </span>
                       <span className="font-medium">{intake.amount}ml</span>
+                      <span className="text-xs text-gray-500">
+                        ({DRINK_TYPES.find(drink => drink.id === intake.drinkType)?.name || 'その他'})
+                      </span>
                     </div>
-                    <div className="text-sm text-gray-500">
-                      {new Date(intake.timestamp).toLocaleTimeString('ja-JP', {
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
+                    <div className="flex items-center gap-2">
+                      <div className="text-sm text-gray-500">
+                        {new Date(intake.timestamp).toLocaleTimeString('ja-JP', {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </div>
+                      <button
+                        onClick={() => showDeleteConfirm(intake.id)}
+                        className="text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded"
+                        title="削除"
+                      >
+                        🗑️
+                      </button>
                     </div>
                   </div>
                 ))}
+            </div>
+          </div>
+        )}
+
+        {/* 削除確認モーダル */}
+        {deleteConfirm.show && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl p-6 max-w-sm w-full">
+              <h3 className="text-lg font-semibold text-gray-800 mb-3">記録を削除</h3>
+              <p className="text-gray-600 mb-6">
+                この水分摂取記録を削除してもよろしいですか？<br/>
+                この操作は取り消せません。
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={cancelDelete}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  キャンセル
+                </button>
+                <button
+                  onClick={deleteIntake}
+                  className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 transition-colors"
+                >
+                  削除
+                </button>
+              </div>
             </div>
           </div>
         )}

@@ -9,7 +9,7 @@ import {
 // LocalStorage操作のラッパークラス
 export class WaterTrackerStorage {
   // データバージョン管理
-  private static readonly VERSION = '1.0.0';
+  private static readonly VERSION = '1.1.0';
 
   // 摂取記録の保存
   static saveIntake(intake: WaterIntake): void {
@@ -99,12 +99,18 @@ export class WaterTrackerStorage {
     if (currentVersion !== this.VERSION) {
       console.log(`Migrating data from ${currentVersion} to ${this.VERSION}`);
 
-      // 将来のバージョンアップ時のマイグレーション処理をここに追加
-      // switch (currentVersion) {
-      //   case '0.0.0':
-      //     // 初回インストール or 古いバージョンからの移行
-      //     break;
-      // }
+      // バージョンアップ時のマイグレーション処理
+      switch (currentVersion) {
+        case '0.0.0':
+        case '1.0.0':
+          // 飲み物種類拡張に伴うマイグレーション（v1.1.0）
+          // 既存の'other'データは互換性のためそのまま維持
+          console.log('Migrating to v1.1.0: Extended drink types support');
+          break;
+        default:
+          // その他のバージョンは互換性を保つ
+          break;
+      }
 
       this.setVersion();
     }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { WaterIntake, DailyStats, ChartData } from '@/types';
+import { WaterIntake, DailyStats, ChartData, DRINK_TYPES } from '@/types';
 import { WaterTrackerStorage } from '@/lib/storage';
 import { DataAggregator } from '@/lib/calculations';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
@@ -142,7 +142,12 @@ export default function HistoryPage() {
           <h1 className="text-xl font-bold text-gray-900">
             📊 履歴・統計
           </h1>
-          <div className="w-12"></div> {/* スペーサー */}
+          <Link
+            href="/settings"
+            className="text-primary-500 hover:text-primary-600 font-medium"
+          >
+            ⚙️ 設定
+          </Link>
         </div>
       </header>
 
