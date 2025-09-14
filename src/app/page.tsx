@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { WaterIntake, DrinkType, PRESET_AMOUNTS } from '@/types';
 import { WaterTrackerStorage } from '@/lib/storage';
 import { DataAggregator, ProgressHelper } from '@/lib/calculations';
@@ -103,10 +104,16 @@ export default function HomePage() {
     <div className="min-h-screen bg-gray-50 pb-20">
       {/* ヘッダー */}
       <header className="bg-white shadow-sm border-b">
-        <div className="max-w-md mx-auto px-4 py-4">
-          <h1 className="text-xl font-bold text-gray-900 text-center">
+        <div className="max-w-md mx-auto px-4 py-4 flex items-center justify-between">
+          <h1 className="text-xl font-bold text-gray-900">
             💧 水分摂取トラッカー
           </h1>
+          <Link
+            href="/history"
+            className="text-primary-500 hover:text-primary-600 font-medium"
+          >
+            📊 履歴
+          </Link>
         </div>
       </header>
 
